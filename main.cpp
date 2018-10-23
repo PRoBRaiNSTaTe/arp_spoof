@@ -146,13 +146,16 @@ int recv_reply(pcap_t *handle, u_int8_t *sender_ip, u_int8_t *target_ip, u_int8_
 
     else if(htons(ether->ether_type)==ETHERTYPE_IP)
     {
-	struct ipv4_hdr *ip=(struct ipv4_hdr *)(ether+1);
-	if((ip->DIP[0]==target_ip[0]) && (ip->DIP[1]==target_ip[1]) && (ip->DIP[2]==target_ip[2]) && (ip->DIP[3]==target_ip[3]))
-	  *packet_size=ip->IPLen;
-	  printf("ip->IPLen:%d\n",ip->IPLen);
-	  printf("packet size:%d\n",*packet_size);
-	  recover_flag=1;
-	  reply_flag=3;
+	  struct ipv4_hdr *ip=(struct ipv4_hdr *)(ether+1);
+	  if((ip->DIP[0]==target_ip[0]) && (ip->DIP[1]==target_ip[1]) && (ip->DIP[2]==target_ip[2]) && (ip->DIP[3]==target_ip[3]))
+	  {
+	    *packet_size=htons(ip->IPLen);
+	    printf("ip->IPLen:%d\n",htons(ip->IPLen));
+	    printf("packet size:%d\n",*packet_size);
+	    recover_flag=1;
+	    reply_flag=3;
+	  }
+	  
     }
 
     if(reply_flag==1)
@@ -213,7 +216,7 @@ int main(int argc, char* argv[]) {
   char* dev = argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+  pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1, errbuf);
   if (handle == NULL) {
     fprintf(stderr, "couldn't open device %s: %s\n", dev, errbuf);
     return -1;
@@ -235,10 +238,10 @@ int main(int argc, char* argv[]) {
   close(sock);
 
 	send_req(handle, my_mac, broadcastmac, my_ip, target_ip, buf, request_flag);
-	recv_reply(handle, my_ip, target_ip, target_mac, recover_flag, &packet_size);
+	recv_reply(handle, target_ip, my_ip, target_mac, recover_flag, &packet_size);
 	request_flag=0;
 	send_req(handle, my_mac, broadcastmac, my_ip, sender_ip, buf, request_flag);
-	recv_reply(handle, sender_ip, target_ip, victim_mac, recover_flag, &packet_size);
+	recv_reply(handle, sender_ip, my_ip, victim_mac, recover_flag, &packet_size);
 	request_flag=1;
 
   while(1)
@@ -266,4 +269,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-
